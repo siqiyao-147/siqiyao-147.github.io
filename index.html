@@ -1,0 +1,1242 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Hello, it's Siqi Yao.</title>
+<style>
+  :root{
+    --night:#17142B;
+    --deep:#0F0D20;
+    --ridge:#241F42;
+    --chalk:#F5F0E6;
+    --lamp:#FFC061;
+    --cool:#5B6BE8;
+    --dim:rgba(245,240,230,.42);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;overflow:hidden;background:var(--deep);}
+  body{
+    font-family:"PingFang SC","Hiragino Sans GB","Source Han Sans SC","Noto Sans SC","Microsoft YaHei",-apple-system,"Segoe UI",sans-serif;
+    color:var(--chalk);
+    -webkit-font-smoothing:antialiased;
+    overscroll-behavior:none;
+    touch-action:none;
+  }
+  canvas{position:fixed;inset:0;width:100%;height:100%;display:block;}
+
+  .chrome{
+    position:fixed;inset:0;pointer-events:none;z-index:2;transition:opacity .5s ease;
+    padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px);
+  }
+  .chrome.away{opacity:0;}
+  .chrome > *{pointer-events:auto;}
+
+  .mark{position:absolute;top:26px;left:30px;max-width:40ch;text-shadow:0 1px 14px rgba(15,13,32,.9);}
+  .mark h1{font-size:21px;font-weight:600;letter-spacing:.015em;line-height:1.3;}
+  .mark .quote{
+    margin-top:11px;font-size:13px;line-height:1.72;letter-spacing:.015em;
+    color:rgba(245,240,230,.62);
+  }
+  .mark p{margin-top:9px;font-size:12.5px;line-height:1.75;color:var(--dim);letter-spacing:.02em;}
+  .mark .quote + p{margin-top:16px;}
+
+
+  .clock{
+    position:absolute;left:30px;bottom:26px;
+    font-size:12.5px;letter-spacing:.09em;color:var(--dim);
+    font-variant-numeric:tabular-nums;
+  }
+  .clock b{color:var(--chalk);font-weight:500;}
+  .clock em{display:block;margin-top:7px;font-style:normal;letter-spacing:.06em;color:var(--chalk);opacity:.75;}
+
+  .keys{position:absolute;right:30px;bottom:26px;font-size:12px;color:var(--dim);letter-spacing:.04em;}
+
+  .dossier{
+    position:absolute;top:0;right:0;bottom:0;
+    width:min(430px,42vw);
+    display:flex;align-items:center;
+    pointer-events:none;opacity:0;
+  }
+  .dossier-scrim{
+    position:absolute;inset:0 0 0 -90px;
+    background:linear-gradient(260deg,rgba(13,11,26,.9) 0%,rgba(13,11,26,.78) 46%,rgba(13,11,26,.34) 76%,rgba(13,11,26,0) 100%);
+  }
+  .dossier-in{position:relative;padding:0 34px 0 10px;width:100%;}
+  .dossier-eyebrow{
+    display:flex;gap:12px;align-items:baseline;
+    font-size:11px;letter-spacing:.2em;color:rgba(245,240,230,.52);
+  }
+  .dossier-eyebrow span:last-child{letter-spacing:.05em;font-variant-numeric:tabular-nums;}
+  .dossier-title{
+    margin-top:10px;font-size:20px;font-weight:600;letter-spacing:.07em;color:#F5F0E6;
+    text-shadow:0 1px 18px rgba(13,11,26,.8);
+  }
+  .dossier-body{margin-top:18px;}
+  .d-entry{padding:10px 0;border-top:1px solid rgba(245,240,230,.1);}
+  .d-entry:first-child{border-top:0;padding-top:2px;}
+  .d-entry time{
+    display:block;font-size:10.5px;letter-spacing:.1em;
+    color:rgba(245,240,230,.48);font-variant-numeric:tabular-nums;
+  }
+  .d-entry h3{margin-top:4px;font-size:13px;font-weight:600;line-height:1.55;color:#F5F0E6;}
+  .d-entry p{
+    margin-top:5px;font-size:11.5px;line-height:1.72;color:rgba(245,240,230,.6);
+    display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;
+  }
+  .dossier-more{margin-top:18px;font-size:10.5px;letter-spacing:.14em;color:rgba(245,240,230,.34);}
+
+  .rail{position:absolute;left:0;bottom:0;height:2px;width:100%;background:rgba(245,240,230,.08);}
+  .rail i{display:block;height:100%;width:0;background:var(--lamp);transition:width .08s linear;}
+
+  .hint{
+    position:absolute;left:50%;bottom:64px;transform:translateX(-50%);
+    text-align:center;font-size:13px;letter-spacing:.2em;color:var(--dim);
+    transition:opacity .6s ease;
+  }
+  .hint svg{display:block;margin:12px auto 0;animation:nudge 2.4s ease-in-out infinite;}
+  .hint.gone{opacity:0;pointer-events:none;}
+  @keyframes nudge{0%,100%{transform:translateY(-3px);opacity:.45}50%{transform:translateY(3px);opacity:1}}
+
+  .page{
+    position:fixed;inset:0;z-index:8;
+    display:flex;align-items:flex-end;
+    opacity:0;transition:opacity .9s cubic-bezier(.4,0,.2,1);
+  }
+  .page.settled{opacity:1;}
+  .page[hidden]{display:none;}
+  .page-scrim{
+    position:absolute;inset:0;pointer-events:none;
+    background:linear-gradient(100deg,rgba(13,11,26,.88) 0%,rgba(13,11,26,.74) 38%,rgba(13,11,26,.3) 62%,rgba(13,11,26,0) 82%);
+  }
+  .page-in{
+    position:relative;width:min(660px,88vw);max-height:100%;overflow-y:auto;
+    padding:calc(58px + env(safe-area-inset-top,0px)) calc(44px + env(safe-area-inset-right,0px))
+            calc(46px + env(safe-area-inset-bottom,0px)) calc(44px + env(safe-area-inset-left,0px));
+    opacity:0;transition:opacity .6s ease .35s;
+    -webkit-overflow-scrolling:touch;
+  }
+  .page.settled .page-in{opacity:1;}
+  .page-eyebrow{
+    display:flex;gap:14px;align-items:baseline;
+    font-size:12px;letter-spacing:.2em;color:rgba(245,240,230,.55);
+  }
+  .page-eyebrow span:last-child{letter-spacing:.06em;font-variant-numeric:tabular-nums;}
+  .page-title{
+    margin-top:12px;font-size:25px;font-weight:600;letter-spacing:.08em;color:#F5F0E6;
+    text-shadow:0 1px 20px rgba(13,11,26,.7);
+  }
+  .page-body{margin-top:26px;}
+  .entry{padding:15px 0;border-top:1px solid rgba(245,240,230,.11);}
+  .entry:first-child{border-top:0;padding-top:4px;}
+  .entry h3{
+    font-size:14px;font-weight:600;letter-spacing:.03em;color:#F5F0E6;line-height:1.55;
+  }
+  .entry time{
+    display:block;margin-bottom:5px;font-size:11.5px;letter-spacing:.1em;
+    color:rgba(245,240,230,.5);font-variant-numeric:tabular-nums;
+  }
+  .entry p{margin-top:7px;font-size:13px;line-height:1.85;color:rgba(245,240,230,.72);}
+  .back{
+    display:inline-block;margin-top:30px;cursor:pointer;text-shadow:0 1px 16px rgba(20,16,36,.55);
+    font-size:12.5px;letter-spacing:.08em;color:rgba(245,240,230,.6);
+    border-bottom:1px solid rgba(245,240,230,.28);padding-bottom:2px;
+    transition:color .25s,border-color .25s;
+  }
+  .back:hover,.back:focus-visible{color:#F5F0E6;border-color:#F5F0E6;}
+
+  .boot{
+    position:fixed;inset:0;z-index:5;background:var(--deep);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;
+    transition:opacity .7s ease;
+  }
+  .boot p{font-size:13px;letter-spacing:.22em;color:var(--dim);}
+  .boot .bar{width:190px;height:1px;background:rgba(245,240,230,.14);overflow:hidden;}
+  .boot .bar i{display:block;height:100%;width:40%;background:var(--chalk);animation:sweep 1.3s ease-in-out infinite;}
+  @keyframes sweep{0%{transform:translateX(-110%)}100%{transform:translateX(260%)}}
+  .boot.gone{opacity:0;pointer-events:none;}
+
+  @media (max-width:860px){
+    .dossier{width:min(360px,52vw)}
+    .dossier-title{font-size:17px}
+  }
+  @media (max-width:620px){
+    .dossier{
+      top:auto;left:0;right:0;bottom:0;width:100%;height:50vh;
+      align-items:flex-end;
+    }
+    .dossier-scrim{
+      inset:-70px 0 0 0;
+      background:linear-gradient(0deg,rgba(13,11,26,.94) 0%,rgba(13,11,26,.8) 48%,rgba(13,11,26,0) 100%);
+    }
+    .dossier-in{padding:0 20px 58px;}
+    .dossier-body{margin-top:12px;}
+    .d-entry p{-webkit-line-clamp:2;}
+    .mark{top:20px;left:20px}
+    .mark h1{font-size:17px}
+    .mark{max-width:30ch}
+    .mark .quote{font-size:12px}
+    .clock{left:20px;bottom:22px}
+    .keys{display:none}
+    .hint{bottom:54px;font-size:12px}
+  }
+  @media (prefers-reduced-motion:reduce){
+    .hint svg{animation:none}
+    .boot .bar i{animation:none;width:100%}
+  }
+</style>
+</head>
+<body>
+
+<canvas id="stage"></canvas>
+
+<div class="chrome">
+  <div class="mark">
+    <h1>Hello, it's Siqi Yao.</h1>
+    <p class="quote">Ground Control to Major Tom,<br>take your protein pills and put your helmet on</p>
+    <p>向下滚动往前骑，向上滚动倒回。路过的行星会亮起，按 Enter 看那一年。</p>
+  </div>
+
+  <aside class="dossier" id="dossier">
+    <div class="dossier-scrim"></div>
+    <div class="dossier-in">
+      <p class="dossier-eyebrow"><span id="dName"></span><span id="dSpan"></span></p>
+      <h2 class="dossier-title" id="dTitle"></h2>
+      <div class="dossier-body" id="dBody"></div>
+      <p class="dossier-more">按 Enter 展开全文</p>
+    </div>
+  </aside>
+
+  <div class="clock"><em id="zone"></em></div>
+  <div class="keys">空格 自动骑行</div>
+
+  <div class="hint" id="hint">
+    滚动开始
+    <svg width="14" height="18" viewBox="0 0 14 18" fill="none" stroke="currentColor" stroke-width="1.2">
+      <path d="M7 1v14M2.5 10.5L7 15.5l4.5-5"/>
+    </svg>
+  </div>
+
+  <div class="rail"><i id="railFill"></i></div>
+</div>
+
+<div class="page" id="page" hidden>
+  <div class="page-scrim"></div>
+  <div class="page-in" id="pageIn">
+    <p class="page-eyebrow"><span id="pageName"></span><span id="pageSpan"></span></p>
+    <h2 class="page-title" id="pageTitle"></h2>
+    <div class="page-body" id="pageBody"></div>
+    <span class="back" id="back" tabindex="0" role="button">返回星路</span>
+  </div>
+</div>
+
+<div class="boot" id="boot">
+  <p id="bootText">正在铺设星路</p>
+  <div class="bar"><i></i></div>
+</div>
+
+<script>
+"use strict";
+(function () {
+
+/* ─────────────────── 地形生成（多倍频平滑噪声） ─────────────────── */
+const SPACING = 16;        // 每个采样点在世界坐标里的像素间距
+const SPAN_PTS = 250;      // 采样点总数，决定骑行线有多长
+const DURATION = 10;       // 名义时长，只用来换算骑行速度
+
+function mulberry(seed) {
+  return function () {
+    seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+    let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+
+// Catmull-Rom：经过每个控制点，且在控制点处切线连续
+function catmull(a, b, c, d, t) {
+  const t2 = t * t, t3 = t2 * t;
+  return 0.5 * (2 * b + (-a + c) * t + (2 * a - 5 * b + 4 * c - d) * t2 + (-a + 3 * b - 3 * c + d) * t3);
+}
+
+// 一层噪声：在 cells 个随机控制点之间做 Catmull-Rom 插值
+function noiseLayer(count, cells, rnd) {
+  const ctrl = new Float32Array(cells + 4);
+  for (let i = 0; i < ctrl.length; i++) ctrl[i] = rnd();
+  const out = new Float32Array(count);
+  for (let i = 0; i < count; i++) {
+    const u = i / (count - 1) * cells;
+    const j = Math.floor(u) + 1;
+    out[i] = catmull(ctrl[j - 1], ctrl[j], ctrl[j + 1], ctrl[j + 2], u - Math.floor(u));
+  }
+  return out;
+}
+
+function makeTerrain(seed) {
+  const count = SPAN_PTS;
+  const rnd = mulberry(seed);
+
+  const mix = (specs) => {
+    const out = new Float32Array(count);
+    let wsum = 0;
+    for (const [cells, w] of specs) {
+      const layer = noiseLayer(count, cells, rnd);
+      for (let i = 0; i < count; i++) out[i] += layer[i] * w;
+      wsum += w;
+    }
+    for (let i = 0; i < count; i++) out[i] /= wsum;
+    return out;
+  };
+
+  const norm = src => {
+    let mn = Infinity, mx = -Infinity;
+    for (let i = 0; i < count; i++) { if (src[i] < mn) mn = src[i]; if (src[i] > mx) mx = src[i]; }
+    const span = Math.max(1e-6, mx - mn);
+    const out = new Float32Array(count);
+    for (let i = 0; i < count; i++) out[i] = (src[i] - mn) / span;
+    return out;
+  };
+
+  const smooth = (arr, r, times) => {
+    let a = arr;
+    for (let t = 0; t < times; t++) {
+      const b = new Float32Array(a.length);
+      for (let i = 0; i < a.length; i++) {
+        let sum = 0, w = 0;
+        for (let k = -r; k <= r; k++) {
+          const j = Math.min(a.length - 1, Math.max(0, i + k));
+          const wt = 1 - Math.abs(k) / (r + 1);
+          sum += a[j] * wt; w += wt;
+        }
+        b[i] = sum / w;
+      }
+      a = b;
+    }
+    return a;
+  };
+
+  // 首尾先留一段平路，再用 smoothstep 接入地形，出发点坡度为零
+  const hold = Math.max(8, Math.round(count * 0.05));
+  const fade = Math.max(16, Math.round(count * 0.14));
+  const flatten = arr => {
+    for (let i = 0; i < hold + fade; i++) {
+      const k = i < hold ? 0 : (i - hold) / fade;
+      const e = k * k * (3 - 2 * k);
+      arr[i] = arr[i] * e + 0.5 * (1 - e);
+      const j = count - 1 - i;
+      arr[j] = arr[j] * e + 0.5 * (1 - e);
+    }
+    return arr;
+  };
+
+  // 限坡：换算成 16px 间距、150px 振幅下约 34°，太陡的地方会像沙堆一样塌下来
+  const MAX_D = 0.036;
+  const limit = arr => {
+    for (let pass = 0; pass < 3; pass++) {
+      for (let i = 1; i < count; i++) {
+        const d = arr[i] - arr[i - 1];
+        if (d > MAX_D) arr[i] = arr[i - 1] + MAX_D;
+        else if (d < -MAX_D) arr[i] = arr[i - 1] - MAX_D;
+      }
+      for (let i = count - 2; i >= 0; i--) {
+        const d = arr[i] - arr[i + 1];
+        if (d > MAX_D) arr[i] = arr[i + 1] + MAX_D;
+        else if (d < -MAX_D) arr[i] = arr[i + 1] - MAX_D;
+      }
+    }
+    return arr;
+  };
+
+  // 骑行线：三层叠加，大起伏为主，细节只占一点
+  const h = limit(flatten(smooth(norm(mix([[6, 0.58], [14, 0.28], [29, 0.14]])), 2, 2)));
+  // 远山用更少的控制点，所以更宽缓；中景居中
+  const lo = flatten(smooth(norm(mix([[4, 0.72], [9, 0.28]])), 3, 2));
+  const mid = flatten(smooth(norm(mix([[7, 0.6], [15, 0.4]])), 2, 1));
+
+  return { count, h, lo, mid, duration: DURATION, worldW: (count - 1) * SPACING };
+}
+
+/* ───────────────────────────── 画布 ───────────────────────────── */
+const cv = document.getElementById("stage");
+const cx = cv.getContext("2d");
+let W = 0, H = 0, DPR = 1;
+
+function resize() {
+  DPR = Math.min(2, window.devicePixelRatio || 1);
+  W = window.innerWidth; H = window.innerHeight;
+  cv.width = Math.floor(W * DPR); cv.height = Math.floor(H * DPR);
+  cx.setTransform(DPR, 0, 0, DPR, 0, 0);
+}
+window.addEventListener("resize", resize);
+resize();
+
+/* ───────────────────────────── 状态 ───────────────────────────── */
+const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+const S = {
+  terrain: null,
+  target: 0, prog: 0, prev: 0, vel: 0,
+  rate: 0, motion: 0, speed: 0,
+  wheelAngle: 0,
+  auto: false,
+  intro: reduceMotion ? 1 : 0,
+  lit: new Array(9).fill(0),
+  beltLit: 0,
+  over: 0, overT: 0,
+  pxy: [],
+  warp: -1, warpT: 0, paused: false,
+  active: -1,
+  band: null,
+  started: false,
+  ready: false,
+  dust: []
+};
+
+const scrollLen = 7000;   // 从太阳骑到海王星需要滚动多少像素。线长不变，只是推得慢些，留出读内容的时间
+
+const els = {
+  boot: document.getElementById("boot"),
+  bootText: document.getElementById("bootText"),
+  hint: document.getElementById("hint"),
+  rail: document.getElementById("railFill"),
+  zone: document.getElementById("zone"),
+  dossier: document.getElementById("dossier"),
+  dName: document.getElementById("dName"),
+  dSpan: document.getElementById("dSpan"),
+  dTitle: document.getElementById("dTitle"),
+  dBody: document.getElementById("dBody"),
+  page: document.getElementById("page"),
+  pageName: document.getElementById("pageName"),
+  pageSpan: document.getElementById("pageSpan"),
+  pageTitle: document.getElementById("pageTitle"),
+  pageBody: document.getElementById("pageBody"),
+  pageIn: document.getElementById("pageIn"),
+  back: document.getElementById("back"),
+  chrome: document.querySelector(".chrome"),
+  back2: null};
+
+/* ───────────────────────── 地形取样 ───────────────────────── */
+function baseline() { return H * 2 / 3; }          // 从下往上三分之一
+function amp() { return Math.min(150, H * 0.2); }
+
+// Catmull-Rom 取样：smoothstep 会在每个采样点把斜率压成零，曲线看着像一串扇贝
+function sample(arr, worldX) {
+  const n = arr.length;
+  const u = Math.max(0, Math.min(n - 1, worldX / SPACING));
+  const i = Math.min(n - 2, Math.floor(u));
+  const t = u - i;
+  const at = j => arr[Math.max(0, Math.min(n - 1, j))];
+  return catmull(at(i - 1), at(i), at(i + 1), at(i + 2), t);
+}
+
+const LAYERS = [
+  { key: "lo",  par: 0.22, amp: 0.95, lift: 0.72, top: "#171333", bot: "#0F0C21", rim: "rgba(116,122,196,.16)" },
+  { key: "mid", par: 0.48, amp: 0.66, lift: 0.38, top: "#1C1739", bot: "#120F28", rim: "rgba(146,136,214,.22)" }
+];
+
+function layerY(worldX, L) {
+  const t = S.terrain;
+  const v = sample(t[L.key], Math.min(t.worldW, Math.max(0, worldX)));
+  return baseline() - (v - 0.5) * 2 * amp() * L.amp * S.intro - amp() * L.lift * S.intro;
+}
+function curveY(worldX) {
+  return baseline() - (sample(S.terrain.h, worldX) - 0.5) * 2 * amp() * S.intro;
+}
+
+/* ───────────────────────── 太阳系 ───────────────────────── */
+const PLANETS = [
+  { name: "太阳",   au: 0,     r: 30,  c: "#FFCE86", sun: true },
+  { name: "水星",   au: 0.39,  r: 3.2, c: "#9A9088" },
+  { name: "金星",   au: 0.72,  r: 5.2, c: "#D7B078" },
+  { name: "地球",   au: 1.00,  r: 5.4, c: "#6E9BD1" },
+  { name: "火星",   au: 1.52,  r: 4.2, c: "#BE6E4B" },
+  { name: "木星",   au: 5.20,  r: 13,  c: "#C6A279" },
+  { name: "土星",   au: 9.58,  r: 10.6,c: "#D5BD8B", ring: true },
+  { name: "天王星", au: 19.22, r: 7.6, c: "#8DC3C7" },
+  { name: "海王星", au: 30.05, r: 7.3, c: "#5D77C2" }
+];
+const LAST = PLANETS.length - 1;
+// 轨道半径开方压缩后仍然内密外疏，直接用会让水星段只剩几十像素，
+// 所以和等分方案按 4:6 混合：既保留越往外越远的感觉，每段又都骑得到。
+// 混合后的值正好就是该行星所在的进度，与屏幕宽度无关。
+const ORBIT = PLANETS.map(p => Math.sqrt(p.au) / Math.sqrt(30.05));
+const STOP = PLANETS.map((p, i) => i === 0 ? 0 : 0.6 * (i / LAST) + 0.4 * ORBIT[i]);
+const LEAD = 42;   // 起步时人与画面左缘的距离
+// 抵达海王星后画面静止，多滚的部分不再推进进度，只喂给柯伊伯带的缩放
+const OVER_SCROLL = 1600;  // 滚满这么多像素，缩放到头
+
+// 柯伊伯带：固定种子的散点，保证每次刷新位置一致
+const BELT = (function () {
+  let seed = 0x5eed1e;
+  const rnd = () => (seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296;
+  const out = [];
+  for (let i = 0; i < 130; i++) {
+    const v = rnd() * 2 - 1;
+    out.push({
+      t: rnd(),                                   // 沿带方向的位置
+      y: Math.sign(v) * Math.pow(Math.abs(v), 1.7), // 带宽方向，向中间聚拢
+      r: 0.5 + rnd() * 1.6,
+      a: 0.22 + rnd() * 0.5
+    });
+  }
+  // 几块大一点的冰体，只做尺寸层次，不标名字（不到冥王星那么远）
+  out.push({ t: 0.26, y: -0.20, r: 2.6, a: 0.68, big: true });
+  out.push({ t: 0.55, y:  0.34, r: 2.2, a: 0.6,  big: true });
+  out.push({ t: 0.78, y: -0.34, r: 2.4, a: 0.64, big: true });
+  return out;
+})();
+
+function bikeHome() { return W < 620 ? W * 0.44 : W * 0.38; }
+
+// 行星在世界坐标里的位置，太阳略微退到起点之左，开场只露一半
+function planetBand() {
+  const worldW = S.terrain.worldW;
+  const pos = STOP.map((s, i) => i === 0 ? -LEAD : s * worldW);
+  return { pos, worldW };
+}
+
+// 自行车当前处在哪一段：太阳→水星算水星，水星→金星算金星，依此类推
+function activePlanet(worldX, band) {
+  for (let i = 1; i <= LAST; i++) if (band.pos[i] >= worldX - 0.5) return i;
+  return LAST;
+}
+
+function drawKuiper(camX, band) {
+  const over = S.over;
+  const k = W < 620 ? 0.68 : 1;
+  const y0 = Math.max(98, Math.min(H * 0.17, 152));
+  const lit = S.beltLit;
+  const a = S.intro * (0.4 + 0.6 * lit);
+
+  // 终点时画面静止，所以按“那一刻的可见范围”布带：从人的右前方一直铺到画面外一点
+  const gap = Math.min(150, W * 0.12);
+  const start = band.worldW + gap;
+  const end = start + W * 0.8;
+  const zoom = 1 + 0.22 * over;          // 只放大一点点，以带的左端为基准向外展开
+  const half = 52 * k * (1 + 0.3 * over);
+
+  cx.save();
+  cx.textAlign = "center";
+
+  for (let i = 0; i < BELT.length; i++) {
+    const o = BELT[i];
+    const base = start + o.t * (end - start);
+    const x = start + (base - start) * zoom - camX;
+    if (x < -60 || x > W + 60) continue;
+    const y = y0 + o.y * half;
+    const r = o.r * k * (1 + 0.6 * over);
+
+    if (o.big) {
+      const R = Math.max(30 * k, r * 9);
+      const gl = cx.createRadialGradient(x, y, r * 0.4, x, y, R);
+      gl.addColorStop(0, "rgba(186,203,228," + (0.2 * lit * S.intro) + ")");
+      gl.addColorStop(1, "rgba(186,203,228,0)");
+      cx.fillStyle = gl;
+      cx.beginPath(); cx.arc(x, y, R, 0, 6.283); cx.fill();
+    }
+    cx.fillStyle = "rgba(196,210,232," + (o.a * a) + ")";
+    cx.beginPath(); cx.arc(x, y, r, 0, 6.283); cx.fill();
+  }
+
+  // 带的名字，跟着一起淡入
+  if (lit > 0.02) {
+    const cxs = start + (end - start) * 0.5 * zoom - camX;
+    if (cxs > -200 && cxs < W + 200) {
+      cx.fillStyle = "rgba(232,228,219," + (0.3 * lit * S.intro) + ")";
+      cx.font = (W < 620 ? 10 : 11) + "px PingFang SC, Hiragino Sans GB, Noto Sans SC, sans-serif";
+      cx.fillText("柯伊伯带", cxs, y0 - half - 22 * k);
+    }
+  }
+  cx.restore();
+}
+
+function drawSolarSystem(camX, band) {
+  const k = W < 620 ? 0.68 : 1;
+  const y0 = Math.max(98, Math.min(H * 0.17, 152));
+  const a = S.intro;
+
+  cx.save();
+  cx.textAlign = "center";
+  cx.font = (W < 620 ? 9 : 10) + "px PingFang SC, Hiragino Sans GB, Noto Sans SC, sans-serif";
+
+  for (let i = 0; i <= LAST; i++) {
+    const p = PLANETS[i];
+    const x = band.pos[i] - camX;
+    const r = p.r * k;
+    const y = y0 + Math.sin(STOP[i] * 5.1 + 0.6) * 15 * k;
+    S.pxy[i] = [x, y, r];
+    if (x < -r * 16 - 120 || x > W + r * 16 + 120) continue;
+    const lit = S.lit[i] || 0;
+
+    if (p.sun) {
+      // 外层弥散光：铺得开、很淡
+      const halo = cx.createRadialGradient(x, y, r * 0.8, x, y, r * 7);
+      halo.addColorStop(0, "rgba(255,206,134," + (0.26 * a) + ")");
+      halo.addColorStop(0.22, "rgba(255,192,116," + (0.10 * a) + ")");
+      halo.addColorStop(0.55, "rgba(255,180,100," + (0.035 * a) + ")");
+      halo.addColorStop(1, "rgba(255,170,90,0)");
+      cx.fillStyle = halo;
+      cx.beginPath(); cx.arc(x, y, r * 7, 0, 6.283); cx.fill();
+
+      // 日冕：一圈暗淡的光环，两侧都柔和过渡
+      const ringR = r * 2.7;
+      const ring = cx.createRadialGradient(x, y, 0, x, y, ringR);
+      ring.addColorStop(0, "rgba(255,200,126,0)");
+      ring.addColorStop(0.50, "rgba(255,200,126,0)");
+      ring.addColorStop(0.66, "rgba(255,210,148," + (0.11 * a) + ")");
+      ring.addColorStop(0.76, "rgba(255,214,156," + (0.15 * a) + ")");
+      ring.addColorStop(0.86, "rgba(255,204,134," + (0.06 * a) + ")");
+      ring.addColorStop(1, "rgba(255,196,120,0)");
+      cx.fillStyle = ring;
+      cx.beginPath(); cx.arc(x, y, ringR, 0, 6.283); cx.fill();
+
+      const core = cx.createRadialGradient(x - r * 0.2, y - r * 0.2, r * 0.1, x, y, r);
+      core.addColorStop(0, "rgba(255,238,204," + (0.9 * a) + ")");
+      core.addColorStop(1, "rgba(255,180,96," + (0.75 * a) + ")");
+      cx.fillStyle = core;
+      cx.beginPath(); cx.arc(x, y, r, 0, 6.283); cx.fill();
+    } else {
+      const bright = Math.min(1, 0.32 + 0.85 * lit) * a;
+
+      if (lit > 0.01) {
+        // 远场辉光：铺得很开。小行星用最小半径兜底，否则水星几乎看不出在发光
+        const Rf = Math.max(110 * k, r * 15);
+        const far = cx.createRadialGradient(x, y, r, x, y, Rf);
+        far.addColorStop(0, hexA(p.c, 0.34 * lit * a));
+        far.addColorStop(0.22, hexA(p.c, 0.16 * lit * a));
+        far.addColorStop(0.5, hexA(p.c, 0.06 * lit * a));
+        far.addColorStop(1, hexA(p.c, 0));
+        cx.fillStyle = far;
+        cx.beginPath(); cx.arc(x, y, Rf, 0, 6.283); cx.fill();
+        // 近场辉光：紧贴星体，亮
+        const Rn = Math.max(34 * k, r * 4.2);
+        const near = cx.createRadialGradient(x, y, r * 0.5, x, y, Rn);
+        near.addColorStop(0, hexA(p.c, 0.8 * lit * a));
+        near.addColorStop(0.5, hexA(p.c, 0.3 * lit * a));
+        near.addColorStop(1, hexA(p.c, 0));
+        cx.fillStyle = near;
+        cx.beginPath(); cx.arc(x, y, Rn, 0, 6.283); cx.fill();
+      }
+      if (p.ring) {
+        cx.save();
+        cx.translate(x, y); cx.rotate(-0.28);
+        cx.strokeStyle = hexA(p.c, 0.5 * bright);
+        cx.lineWidth = 1.6 * k;
+        cx.beginPath(); cx.ellipse(0, 0, r * 2.05, r * 0.52, 0, 0, 6.283); cx.stroke();
+        cx.strokeStyle = hexA(p.c, 0.26 * bright);
+        cx.lineWidth = 1 * k;
+        cx.beginPath(); cx.ellipse(0, 0, r * 2.5, r * 0.64, 0, 0, 6.283); cx.stroke();
+        cx.restore();
+      }
+      // 受光面朝向太阳（左侧），点亮时中心提到接近白热
+      const shade = cx.createRadialGradient(x - r * 0.45, y - r * 0.3, r * 0.1, x, y, r * 1.15);
+      shade.addColorStop(0, lit > 0.5
+        ? "rgba(255,252,245," + ((0.45 + 0.5 * lit) * a) + ")"
+        : hexA(p.c, bright));
+      shade.addColorStop(0.45, hexA(p.c, bright));
+      shade.addColorStop(1, hexA(p.c, 0.3 * bright));
+      cx.fillStyle = shade;
+      cx.beginPath(); cx.arc(x, y, r, 0, 6.283); cx.fill();
+    }
+
+    const la = p.sun ? 0.28 * a : (0.18 + 0.82 * lit) * a;
+    cx.fillStyle = "rgba(240,237,230," + la + ")";
+    cx.fillText(p.name, x, y + r + (p.sun ? 20 : 15) * k);
+  }
+  cx.restore();
+}
+
+function hexA(hex, alpha) {
+  const n = parseInt(hex.slice(1), 16);
+  return "rgba(" + (n >> 16) + "," + ((n >> 8) & 255) + "," + (n & 255) + "," + alpha + ")";
+}
+
+// 把星球颜色朝白色或黑色推，用于跃迁和落地页
+function shift(hex, amount) {
+  const n = parseInt(hex.slice(1), 16);
+  let r = n >> 16, g = (n >> 8) & 255, b = n & 255;
+  if (amount > 0) { r += (255 - r) * amount; g += (255 - g) * amount; b += (255 - b) * amount; }
+  else { const m = 1 + amount; r *= m; g *= m; b *= m; }
+  const h = v => Math.round(Math.max(0, Math.min(255, v))).toString(16).padStart(2, "0");
+  return "#" + h(r) + h(g) + h(b);
+}
+
+// 行星光晕胀大吞没画面：亮度由内向外逐级减弱
+function drawWarp() {
+  const i = S.warp;
+  if (i < 0) return;
+  const xy = S.pxy[i] || [W / 2, H * 0.2, 10];
+  const x = xy[0], y = xy[1], r0 = Math.max(6, xy[2]);
+  const p = Math.min(1, S.warpT);
+  const e = p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
+
+  let far = 0;
+  for (const c of [[0, 0], [W, 0], [0, H], [W, H]]) far = Math.max(far, Math.hypot(c[0] - x, c[1] - y));
+  // 终点半径远超画面对角线，画面只落在渐变的内侧一半，边角才不会透出底下的夜色
+  const R = r0 * 3 + (far * 1.9 - r0 * 3) * e;
+  const A = Math.min(1, 0.4 + 1.4 * p);
+
+  const c = PLANETS[i].c;
+  const g = cx.createRadialGradient(x, y, 0, x, y, R);
+  g.addColorStop(0.00, hexA(shift(c, 0.72), A));
+  g.addColorStop(0.22, hexA(shift(c, 0.38), A));
+  g.addColorStop(0.50, hexA(c, A));
+  g.addColorStop(0.75, hexA(shift(c, -0.30), A));
+  g.addColorStop(0.92, hexA(shift(c, -0.55), A * 0.9));
+  g.addColorStop(1.00, hexA(shift(c, -0.65), 0));
+  cx.fillStyle = g;
+  cx.beginPath(); cx.arc(x, y, R, 0, 6.283); cx.fill();
+}
+
+function startWarp(i) {
+  if (S.warp >= 0 || i < 1) return;
+  S.warp = i;
+  S.warpT = 0;
+  S.paused = true;
+  S.auto = false;
+  els.hint.classList.add("gone");
+}
+
+/* ─────────────── 八个学年，对应八颗行星 ─────────────── */
+const YEARS = [null,
+{ span: "2019.09 — 2020.08", title: "入学", items: [
+  { t: "2019.09", h: "进入华中科技大学，集成电路学院，电子科学与技术（本科）",
+    d: "开始修读信号与线性系统、单片机原理及运用、嵌入式系统原理与设计等专业基础课。" }
+]},
+{ span: "2020.09 — 2021.08", title: "社团与建模", items: [
+  { t: "2020.09 — 2021.09", h: "华中科技大学红十字志愿服务队 部长" },
+  { t: "2021.02", h: "美国大学生交叉学科建模竞赛（ICM）Successful Participant" },
+  { t: "2020—2021 学年度", h: "自强奖学金", d: "证书编号 2021006504。" },
+  { t: "2020—2021 学年度", h: "文体活动优秀奖学金", d: "证书编号 2021003158。" },
+  { t: "2020—2021 学年度", h: "本科生优秀寝室", d: "韵苑 7 栋 325，证书编号 2021008027。" },
+  { t: "2020 学年", h: "优秀学生社团干部", d: "证书编号 2020351068。" }
+]},
+{ span: "2021.09 — 2022.08", title: "硬件与竞赛", items: [
+  { t: "2021.09 — 2022.09", h: "集成电路学院办公室 助理" },
+  { t: "2021.11", h: "校秋季运动会 400 米第一名",
+    d: "成绩 59.59，本科男子甲组。同场 1000 米 3:59.36，第五名。" },
+  { t: "2021.12", h: "第十三届全国大学生数学竞赛（非数学类）三等奖",
+    d: "证书编号 CMS（鄂）F20212905。" },
+  { t: "2022.03 — 2022.05", h: "基于 NEON 指令的图像 JPEG 压缩编码与解码优化",
+    d: "为挖掘飞腾 D2000 开发板在 ARMv8 架构下的计算潜力，引入 NEON 指令集加速整数与浮点数据的批量处理，针对 DCT 与 IDCT 部分优化基础 JPEG 编解码代码，利用 SIMD 并行性提高编解码速度，实现更流畅的实时图像采集与显示。" },
+  { t: "2022.07", h: "全国大学生集成电路创新创业大赛 华中赛区三等奖",
+    d: "第六届，参赛题目为飞腾杯—基于飞腾教育开发板的电子系统设计。" }
+]},
+{ span: "2022.09 — 2023.08", title: "本科收尾与保研", items: [
+  { t: "2022.11 — 2023.05", h: "飞行器系统弹性辨识方法及控制研究",
+    d: "针对弹性体飞行器姿态跟踪控制，先用插值傅里叶变换与滑动傅里叶变换辨识传感器信号的弹性振动频率，通过陷波滤波器做频域抑制；再将神经网络与最优控制结合，在执行器带约束的情况下构建基于评价-动作网络的自适应动态规划（ADP）框架，用神经网络近似求解 HJB 方程，实现姿态的近似最优跟踪控制。" },
+  { t: "2023.06", h: "本科毕业，获评华中科技大学 2023 届优秀毕业生" },
+  { t: "2023.06", h: "获推免资格，保送本校控制工程" }
+]},
+{ span: "2023.09 — 2024.08", title: "研究生入学与多智能体", items: [
+  { t: "2023.09", h: "进入人工智能与自动化学院，控制工程（推免生）",
+    d: "修读最优控制、模式识别理论、高级机器学习、智能控制技术等课程。" },
+  { t: "2024.01 — 2024.07", h: "智能体群决策模拟器设计",
+    d: "为解决多智能体协同避障突防问题，基于 CTDE 框架的多智能体强化学习算法，实现支持三十个智能体协同训练的分布式系统。对比同步与异步梯度更新两种并行方案，因后者策略滞后与梯度冲突导致训练不稳定，最终采用同步并行更新实现最高十进程并行训练。在 MPE 仿真平台与物理仿真环境中验证，突防成功率提升 80% 以上。" }
+]},
+{ span: "2024.09 — 2025.08", title: "工程实践", items: [
+  { t: "2024.11", h: "学业一等奖学金" },
+  { t: "2024.11 — 2025.03", h: "航天科工四院 预研室 实习",
+    d: "针对量测偏差问题引入去偏转换方法，为后续跟踪滤波提供更稳定的输入；参与多模式交互式目标跟踪算法研发，基于交互式多模型（IMM）框架结合不同运动模式的切换逻辑，仿真场景下将跟踪误差降低约 15%；协助开展最优控制问题的求解与仿真验证，围绕飞行器末端导引段的时间与能量最优问题。" },
+  { t: "2025.07", h: "国家公派留学奖学金" },
+  { t: "2025.07 — 2025.09", h: "迈瑞医疗 算法验证组 实习",
+    d: "构建故障测试数据集，覆盖多种应用场景，从信号质量、波形等维度生成有效信号，修正用户反馈问题；从海量真实数据中设计多条件筛选脚本，高效构建结构化测试数据库，将后续算法验证周期缩短约 30%。" }
+]},
+{ span: "2025.09 — 2026.08", title: "制导与对抗", items: [
+  { t: "2025.10 — 2026.06", h: "面向多模式机动目标的制导与强化学习对抗方法研究",
+    d: "针对多模式机动目标估计滞后及“飞行器-目标-拦截器”三体对抗决策难题，研发智能突防与混合制导系统。提出 IMM-CNN-GRU 融合滤波算法补偿机动切换误差；推导基于障碍函数的广义超扭曲滑模制导律（BF-GSTA），实现强噪声下终端落角的高精度约束与抖振抑制；引入 PPO 强化学习算法解耦制导平面，并通过环境向量化提高训练效率，实现辅助机动规避。" },
+  { t: "2026.08", h: "赴英国约克大学 安全控制实验室 交流" }
+]},
+{ span: "2026.09 — 2027.06", title: "约克与毕业", items: [
+  { t: "2026.08 — 至今", h: "University of York 安全控制实验室 交流" },
+  { t: "技能", h: "算法与工程",
+    d: "掌握 C、Python、MATLAB，能独立完成算法开发、训练及实验分析；熟悉 DQN、SAC、PPO 等强化学习算法，并有 MADDPG 等多智能体强化学习研究经历；熟悉 PyTorch 及分布式训练框架，以及 gym、MuJoCo 等仿真平台；具备硬件电路基础与嵌入式开发经历，能与硬件、感知、数据团队协同工作。" },
+  { t: "语言", h: "英语 CET6 565", d: "拥有海外留学经历，可支撑跨国交流协作与工作推进。" },
+  { t: "2027.06", h: "预计硕士毕业" }
+]}];
+
+/* ───────── 随区段渐显的内容面板 ───────── */
+const smoothstep = (a, b, x) => {
+  const t = Math.max(0, Math.min(1, (x - a) / Math.max(1e-6, b - a)));
+  return t * t * (3 - 2 * t);
+};
+
+// 透明度完全由“自行车在本区段里走到哪”决定：前 20% 渐显，后 20% 渐隐
+const RAMP = 0.2;
+function dossierAlpha(i) {
+  if (i < 1 || !YEARS[i]) return 0;
+  const lo = i > 1 ? STOP[i - 1] : 0, hi = STOP[i];
+  const u = (S.prog - lo) / Math.max(1e-6, hi - lo);
+  let a = smoothstep(0, RAMP, u);
+  if (i < LAST) a *= 1 - smoothstep(1 - RAMP, 1, u);   // 海王星是终点，到了就不再淡出
+  return (a * S.intro).toFixed(3);
+}
+
+function fillDossier(i) {
+  const Y = YEARS[i];
+  if (!Y) { els.dBody.innerHTML = ""; els.dTitle.textContent = ""; els.dName.textContent = ""; els.dSpan.textContent = ""; return; }
+  els.dName.textContent = PLANETS[i].name;
+  els.dSpan.textContent = Y.span;
+  els.dTitle.textContent = Y.title;
+  els.dBody.innerHTML = "";
+  for (const it of Y.items) {
+    const box = document.createElement("div");
+    box.className = "d-entry";
+    const time = document.createElement("time");
+    time.textContent = it.t;
+    const head = document.createElement("h3");
+    head.textContent = it.h;
+    box.appendChild(time);
+    box.appendChild(head);
+    if (it.d) {
+      const para = document.createElement("p");
+      para.textContent = it.d;
+      box.appendChild(para);
+    }
+    els.dBody.appendChild(box);
+  }
+}
+
+function landPage(i) {
+  const Y = YEARS[i];
+  els.pageName.textContent = PLANETS[i].name;
+  els.pageSpan.textContent = Y ? Y.span : "";
+  els.pageTitle.textContent = Y ? Y.title : "";
+  els.pageBody.innerHTML = "";
+  if (Y) {
+    for (const it of Y.items) {
+      const box = document.createElement("div");
+      box.className = "entry";
+      const time = document.createElement("time");
+      time.textContent = it.t;
+      const head = document.createElement("h3");
+      head.textContent = it.h;
+      box.appendChild(time);
+      box.appendChild(head);
+      if (it.d) {
+        const para = document.createElement("p");
+        para.textContent = it.d;
+        box.appendChild(para);
+      }
+      els.pageBody.appendChild(box);
+    }
+  }
+  els.pageIn.scrollTop = 0;
+  els.page.hidden = false;
+  void els.page.offsetWidth;                 // 强制回流，下面的过渡才会生效
+  els.page.classList.add("settled");         // 页面本身透明，画布上定格的渐变就是底色
+  els.chrome.classList.add("away");
+}
+
+function leavePage() {
+  els.chrome.classList.remove("away");
+  els.page.hidden = true;
+  els.page.classList.remove("settled");
+  S.warp = -1;
+  S.warpT = 0;
+  S.paused = false;
+}
+
+/* ───────────────────────── 绘制 ───────────────────────── */
+const stars = [];
+for (let i = 0; i < 160; i++) {
+  stars.push({ x: Math.random() * 4000, y: Math.random(), r: Math.random() * 1.3 + 0.3, a: Math.random() * 0.5 + 0.12 });
+}
+
+function draw(camX, bikeX) {
+  const t = S.terrain;
+
+  // 夜空
+  const sky = cx.createLinearGradient(0, 0, 0, H);
+  sky.addColorStop(0, "#0E0C1E");
+  sky.addColorStop(0.55, "#17142B");
+  sky.addColorStop(1, "#221B3C");
+  cx.fillStyle = sky;
+  cx.fillRect(0, 0, W, H);
+
+  // 星尘（视差）
+  const sOff = camX * 0.06;
+  cx.save();
+  for (let i = 0; i < stars.length; i++) {
+    const s = stars[i];
+    let x = ((s.x - sOff) % 4000 + 4000) % 4000;
+    if (x > W + 5) continue;
+    cx.globalAlpha = s.a * (0.4 + 0.6 * S.intro);
+    cx.fillStyle = "#D9D5CB";
+    cx.beginPath();
+    cx.arc(x, s.y * baseline() * 0.9, s.r, 0, 6.283);
+    cx.fill();
+  }
+  cx.restore();
+
+  drawKuiper(camX, S.band);
+  drawSolarSystem(camX, S.band);
+
+  const step = 2;
+
+  // 远山与中景：同一首曲子的低频和中频轮廓
+  for (let li = 0; li < LAYERS.length; li++) {
+    const L = LAYERS[li];
+    const off = camX * L.par;
+    cx.beginPath();
+    cx.moveTo(-10, H);
+    cx.lineTo(-10, layerY(off - 10, L));
+    for (let x = -10; x <= W + 10; x += step * 2) cx.lineTo(x, layerY(off + x, L));
+    cx.lineTo(W + 10, H);
+    cx.closePath();
+    const g = cx.createLinearGradient(0, baseline() - amp() * (L.amp + L.lift), 0, H);
+    g.addColorStop(0, L.top);
+    g.addColorStop(1, L.bot);
+    cx.fillStyle = g;
+    cx.fill();
+    cx.beginPath();
+    cx.moveTo(-10, layerY(off - 10, L));
+    for (let x = -10; x <= W + 10; x += step * 2) cx.lineTo(x, layerY(off + x, L));
+    cx.strokeStyle = L.rim;
+    cx.lineWidth = 1;
+    cx.stroke();
+  }
+
+  // 主曲线路径
+  const path = new Path2D();
+  const first = Math.min(t.worldW, Math.max(0, camX - 10));
+  path.moveTo(-10, curveY(first));
+  for (let x = -10; x <= W + 10; x += step) {
+    const wx = Math.min(t.worldW, Math.max(0, camX + x));
+    path.lineTo(x, curveY(wx));
+  }
+
+  // 骑行线下方的近景
+  const fill = new Path2D(path);
+  fill.lineTo(W + 10, H);
+  fill.lineTo(-10, H);
+  fill.closePath();
+  // 近景地面：不透明，盖掉所有低于骑行线的山脊
+  const ground = cx.createLinearGradient(0, baseline() - amp(), 0, H);
+  ground.addColorStop(0, "#211A3E");
+  ground.addColorStop(1, "#140F2B");
+  cx.fillStyle = ground;
+  cx.fill(fill);
+
+  // 曲线下方的辉光
+  const grd = cx.createLinearGradient(0, baseline() - amp(), 0, baseline() + amp() * 1.4);
+  grd.addColorStop(0, "rgba(91,107,232,.16)");
+  grd.addColorStop(0.5, "rgba(91,107,232,.05)");
+  grd.addColorStop(1, "rgba(91,107,232,0)");
+  cx.fillStyle = grd;
+  cx.fill(fill);
+
+  // 车灯投在地形上的光池
+  cx.save();
+  cx.clip(fill);
+  const poolA = S.motion > 0 ? 0.16 * Math.min(1, 0.3 + S.motion) : 0;
+  const pool = cx.createRadialGradient(bikeX + 30, baseline(), 0, bikeX + 30, baseline(), 260);
+  pool.addColorStop(0, "rgba(255,192,97," + poolA + ")");
+  pool.addColorStop(1, "rgba(255,192,97,0)");
+  cx.fillStyle = pool;
+  cx.fillRect(0, 0, W, H);
+  cx.restore();
+
+  // 曲线本体
+  cx.save();
+  cx.strokeStyle = "rgba(226,222,214,.52)";
+  cx.lineWidth = 1.6;
+  cx.lineJoin = "round";
+  cx.shadowColor = "rgba(226,222,214,.22)";
+  cx.shadowBlur = 9;
+  cx.stroke(path);
+  cx.restore();
+}
+
+/* ───────────────────────── 小人与自行车 ───────────────────────── */
+function ik(ax, ay, bx, by, l1, l2, flip) {
+  let dx = bx - ax, dy = by - ay;
+  let d = Math.hypot(dx, dy) || 0.001;
+  const ux = dx / d, uy = dy / d;
+  d = Math.min(d, l1 + l2 - 0.01);
+  d = Math.max(d, Math.abs(l1 - l2) + 0.01);
+  const a = (l1 * l1 - l2 * l2 + d * d) / (2 * d);
+  const h = Math.sqrt(Math.max(0, l1 * l1 - a * a));
+  return [ax + ux * a - uy * h * flip, ay + uy * a + ux * h * flip];
+}
+
+function drawRider(x, y, slope, scale) {
+  const ang = Math.atan2(slope, 1);
+  cx.save();
+  cx.translate(x, y);
+  cx.rotate(ang);
+  cx.scale(scale, scale);
+  cx.lineCap = "round";
+  cx.lineJoin = "round";
+
+  const R = 11, wa = S.wheelAngle;
+  const rear = [-15, -R], front = [15, -R];
+  const lean = Math.max(-0.18, Math.min(0.3, S.motion * 0.06));
+
+  // 车灯光锥：只在前进时亮
+  const lampA = S.motion > 0 ? Math.min(0.5, S.motion * 0.25) : 0;
+  if (lampA > 0.01) {
+    cx.save();
+    const cone = cx.createLinearGradient(18, -32, 190, -6);
+    cone.addColorStop(0, "rgba(255,192,97," + lampA + ")");
+    cone.addColorStop(1, "rgba(255,192,97,0)");
+    cx.fillStyle = cone;
+    cx.beginPath();
+    cx.moveTo(17, -33);
+    cx.lineTo(200, -58);
+    cx.lineTo(200, 16);
+    cx.closePath();
+    cx.fill();
+    cx.restore();
+  }
+
+  // 车轮
+  cx.strokeStyle = "rgba(232,228,219,.66)";
+  cx.lineWidth = 1.7;
+  [rear, front].forEach(w => {
+    cx.beginPath();
+    cx.arc(w[0], w[1], R, 0, 6.283);
+    cx.stroke();
+    cx.save();
+    cx.globalAlpha = 0.4;
+    cx.lineWidth = 1;
+    for (let k = 0; k < 4; k++) {
+      const a = wa + k * Math.PI / 4;
+      cx.beginPath();
+      cx.moveTo(w[0] - Math.cos(a) * R, w[1] - Math.sin(a) * R);
+      cx.lineTo(w[0] + Math.cos(a) * R, w[1] + Math.sin(a) * R);
+      cx.stroke();
+    }
+    cx.restore();
+  });
+
+  // 车架
+  const bb = [0, -13], seat = [-7, -31], head = [13, -30], bar = [16, -33];
+  cx.lineWidth = 1.7;
+  cx.strokeStyle = "rgba(232,228,219,.66)";
+  cx.beginPath();
+  cx.moveTo(rear[0], rear[1]); cx.lineTo(seat[0], seat[1]);
+  cx.lineTo(bb[0], bb[1]); cx.lineTo(rear[0], rear[1]);
+  cx.moveTo(seat[0], seat[1]); cx.lineTo(head[0], head[1]);
+  cx.lineTo(bb[0], bb[1]);
+  cx.moveTo(head[0], head[1]); cx.lineTo(front[0], front[1]);
+  cx.moveTo(head[0] - 1, head[1] + 1); cx.lineTo(bar[0], bar[1]);
+  cx.moveTo(bar[0] - 5, bar[1] - 1); cx.lineTo(bar[0] + 3, bar[1]);
+  cx.stroke();
+
+  // 车灯本体
+  const lit = Math.max(0, Math.min(1, S.motion * 2));
+  cx.fillStyle = lit > 0.02
+    ? "rgba(255,192,97," + (0.35 + 0.65 * lit) + ")"
+    : "rgba(150,146,175,.7)";
+  cx.beginPath(); cx.arc(17, -33, 2.3, 0, 6.283); cx.fill();
+
+  // 骑手
+  const hip = [-5 + lean * 6, -32];
+  const sh = [4 + lean * 14, -45 + Math.abs(lean) * 2];
+  cx.save();
+  cx.lineWidth = 2;
+  cx.strokeStyle = "rgba(236,232,223,.72)";
+
+  // 腿（曲柄带动）
+  for (let side = 0; side < 2; side++) {
+    const pa = wa * 0.62 + side * Math.PI;
+    const foot = [bb[0] + Math.cos(pa) * 7, bb[1] + Math.sin(pa) * 7];
+    const knee = ik(hip[0], hip[1], foot[0], foot[1], 13, 14, -1);
+    cx.globalAlpha = side ? 0.55 : 1;
+    cx.beginPath();
+    cx.moveTo(hip[0], hip[1]);
+    cx.lineTo(knee[0], knee[1]);
+    cx.lineTo(foot[0], foot[1]);
+    cx.stroke();
+  }
+  cx.globalAlpha = 1;
+
+  // 躯干
+  cx.beginPath();
+  cx.moveTo(hip[0], hip[1]);
+  cx.lineTo(sh[0], sh[1]);
+  cx.stroke();
+
+  // 手臂
+  const elbow = ik(sh[0], sh[1], bar[0], bar[1], 9, 9, -1);
+  cx.lineWidth = 1.7;
+  cx.beginPath();
+  cx.moveTo(sh[0], sh[1]);
+  cx.lineTo(elbow[0], elbow[1]);
+  cx.lineTo(bar[0], bar[1]);
+  cx.stroke();
+
+  // 头
+  cx.fillStyle = "rgba(236,232,223,.78)";
+  cx.beginPath();
+  cx.arc(sh[0] + 3.5, sh[1] - 6.5, 5, 0, 6.283);
+  cx.fill();
+  cx.restore();
+
+  cx.restore();
+}
+
+/* ───────────────────────── 主循环 ───────────────────────── */
+let last = performance.now();
+
+function frame(now) {
+  requestAnimationFrame(frame);
+  const dt = Math.min(0.05, Math.max(0.001, (now - last) / 1000));
+  last = now;
+  if (!S.ready) return;
+
+  if (S.intro < 1) S.intro = Math.min(1, S.intro + dt / 1.1);
+
+  if (S.auto) S.target = Math.min(1, S.target + dt / (DURATION * 2.6));   // 自动骑行放慢，够读完每一段
+
+  // 临界阻尼弹簧：加速度从零起步，不会一上来就满速，也不会过冲
+  const W0 = 5.2;
+  S.prev = S.prog;
+  S.vel += (W0 * W0 * (S.target - S.prog) - 2 * W0 * S.vel) * dt;
+  S.prog += S.vel * dt;
+  if (S.prog < 0) { S.prog = 0; S.vel = 0; }
+  if (S.prog > 1) { S.prog = 1; S.vel = 0; }
+  if (Math.abs(S.target - S.prog) < 1e-4 && Math.abs(S.vel) < 2e-3) {
+    S.prog = S.target; S.vel = 0;
+  }
+
+  S.motion = (S.prog - S.prev) / dt * DURATION;
+  S.rate = S.motion;
+  S.speed = Math.min(1, Math.abs(S.motion));
+
+  const worldX = S.prog * S.terrain.worldW;
+  // 相机在起点夹住，所以人从最左侧出发，自己走到 bikeHome() 之后画面才开始跟
+  const camX = Math.max(-LEAD, worldX - bikeHome());
+  const bikeX = worldX - camX;
+
+  // 当前所在的行星区段，点亮值做缓动
+  S.band = planetBand();
+  const inBelt = S.over > 0.03;
+  const act = inBelt ? -1 : activePlanet(worldX, S.band);
+  if (act !== S.active) {
+    S.active = act;
+    els.zone.textContent = "正在经过 " + (act < 0 ? "柯伊伯带" : PLANETS[act].name);
+    fillDossier(act);        // 换在透明度为零的那一刻，所以看不到替换本身
+  }
+  els.dossier.style.opacity = dossierAlpha(act);
+  const ease = Math.min(1, dt * 6);
+  S.over += (S.overT - S.over) * ease;
+  for (let i = 0; i <= LAST; i++) {
+    const want = i === act ? 1 : 0;
+    S.lit[i] += (want - S.lit[i]) * ease;
+  }
+  S.beltLit += ((inBelt ? 1 : 0) - S.beltLit) * ease;
+
+  // 轮子转动 = 沿曲线走过的弧长 / 半径
+  const yHere = curveY(worldX), yAhead = curveY(Math.min(S.terrain.worldW, worldX + 12));
+  const slope = (yAhead - yHere) / 12;
+  const dWorld = (S.prog - S.prev) * S.terrain.worldW * Math.sqrt(1 + slope * slope);
+  S.wheelAngle += dWorld / 11;
+
+  draw(camX, bikeX);
+
+  const scale = W < 620 ? 0.82 : 1;
+  drawRider(bikeX, curveY(worldX), slope, scale);
+
+  if (S.warp >= 0) {
+    if (S.warpT < 1) S.warpT = Math.min(1, S.warpT + dt / 1.05);
+    drawWarp();                              // 到头后继续定格，供页面淡入时垫底
+    if (S.warpT >= 1 && els.page.hidden) landPage(S.warp);
+  }
+
+  els.rail.style.width = (Math.min(1, S.prog) * 100).toFixed(2) + "%";
+}
+requestAnimationFrame(frame);
+
+/* ───────────────────────── 交互 ───────────────────────── */
+function kick() {
+  if (!S.started) {
+    S.started = true;
+    els.hint.classList.add("gone");
+  }
+}
+
+function nudge(delta) {
+  if (S.paused) return;
+  kick();
+  S.auto = false;
+  // 已经到终点还往下滚：只放大柯伊伯带
+  if (delta > 0 && S.target >= 1) {
+    S.overT = Math.min(1, S.overT + delta / OVER_SCROLL);
+    return;
+  }
+  // 往回滚立刻退出观星状态，缩放收回的同时人就开始倒骑
+  if (delta < 0) S.overT = 0;
+  S.target = Math.min(1, Math.max(0, S.target + delta / scrollLen));
+}
+
+window.addEventListener("wheel", e => {
+  if (S.paused) return;          // 落地页交给浏览器原生滚动
+  e.preventDefault();
+  let d = e.deltaY;
+  if (e.deltaMode === 1) d *= 18;
+  else if (e.deltaMode === 2) d *= H;
+  nudge(d);
+}, { passive: false });
+
+let touchY = null;
+window.addEventListener("touchstart", e => { if (S.paused) return; touchY = e.touches[0].clientY; kick(); }, { passive: true });
+window.addEventListener("touchmove", e => {
+  if (S.paused) return;
+  if (touchY === null) return;
+  const y = e.touches[0].clientY;
+  nudge((touchY - y) * 2.2);
+  touchY = y;
+  e.preventDefault();
+}, { passive: false });
+window.addEventListener("touchend", () => { touchY = null; }, { passive: true });
+
+window.addEventListener("keydown", e => {
+  if (e.code === "Enter" || e.code === "NumpadEnter") {
+    if (document.activeElement && document.activeElement.tagName === "LABEL") return;
+    e.preventDefault();
+    if (S.paused) { if (!els.page.hidden) leavePage(); }
+    else if (S.ready && S.active >= 1) startWarp(S.active);
+    return;
+  }
+  if (e.code === "Escape") { if (!els.page.hidden) leavePage(); return; }
+  if (S.paused) return;
+  if (e.code === "Space") {
+    e.preventDefault();
+    kick();
+    S.auto = !S.auto;
+    if (S.auto && S.target >= 1) S.target = 0;
+  } else if (e.code === "ArrowDown" || e.code === "ArrowRight") { e.preventDefault(); nudge(320); }
+  else if (e.code === "ArrowUp" || e.code === "ArrowLeft") { e.preventDefault(); nudge(-320); }
+  else if (e.code === "Home") { S.target = 0; }
+});
+
+els.back.addEventListener("click", leavePage);
+els.back.addEventListener("keydown", e => {
+  if (e.key === "Enter" || e.key === " ") { e.preventDefault(); leavePage(); }
+});
+
+/* ───────────────────────── 启动 ───────────────────────── */
+function startRide(seed) {
+  S.terrain = makeTerrain(seed);
+  S.target = S.prog = S.prev = S.vel = 0;
+  S.wheelAngle = 0;
+  S.auto = false;
+  S.lit.fill(0);
+  S.beltLit = 0;
+  S.over = S.overT = 0;
+  if (!els.page.hidden) leavePage();
+  S.active = -1;
+  S.band = null;
+  S.intro = reduceMotion ? 1 : 0;
+  S.ready = true;
+  els.boot.classList.add("gone");
+}
+
+requestAnimationFrame(() => startRide(20190901));
+
+})();
+</script>
+</body>
+</html>
